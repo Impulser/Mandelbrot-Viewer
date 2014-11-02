@@ -1,75 +1,105 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MandelbrotSet
 {
     public static class ColorExtensions
     {
-        public static Color FromArgb<T>(T R, T G, T B)
-            where T : IConvertible
+        public static Color FromArgb<T>(T r, T g, T b)
+                where T : IConvertible
         {
-            return FromArgb(default(T), R, G, B, true);
+            return FromArgb(default(T), r, g, b, true);
         }
 
-        public static Color FromArgb<T>(T A, T R, T G, T B, bool ignoreAlpha = true)
-            where T : IConvertible
+        public static Color FromArgb<T>(T a, T r, T g, T b, bool ignoreAlpha = true)
+                where T : IConvertible
         {
-            return Color.FromArgb(ignoreAlpha ? 255 : A.ToInt32(null).NormalizeColourComponent(), R.ToInt32(null).NormalizeColourComponent(), G.ToInt32(null).NormalizeColourComponent(), B.ToInt32(null).NormalizeColourComponent());
+            return Color.FromArgb(ignoreAlpha
+                                          ? 255
+                                          : a.NormColourComp(), r.NormColourComp(), g.NormColourComp(),
+                                  b.NormColourComp());
         }
 
         public static Color LinearInterpolate(this Color start, Color end, double ratio, bool ignoreAlpha = true)
         {
             double ratioNorm = 1.0 - ratio,
-            A = (ratioNorm * start.A) + (ratio * end.A),
-            R = (ratioNorm * start.R) + (ratio * end.R),
-            G = (ratioNorm * start.G) + (ratio * end.G),
-            B = (ratioNorm * start.B) + (ratio * end.B);
-            return FromArgb(A, R, G, B, ignoreAlpha);
+                   a = (ratioNorm * start.A) + (ratio * end.A),
+                   r = (ratioNorm * start.R) + (ratio * end.R),
+                   g = (ratioNorm * start.G) + (ratio * end.G),
+                   b = (ratioNorm * start.B) + (ratio * end.B);
+            return FromArgb(a, r, g, b, ignoreAlpha);
         }
 
-        public static int NormalizeColourComponent(this int value)
+        public static int NormColourComp(this IConvertible input)
         {
-            if (value < 0)
+            var value = input.ToInt32(null);
+            while (true)
             {
-                value = -((-value) % 510);
-                return NormalizeColourComponent(255 + value);
-            }
+                if (value < 0)
+                {
+                    value = -((-value) % 510);
+                    value = 255 + value;
+                    continue;
+                }
 
-            if (value > 255)
-            {
-                value %= 510;
-                return NormalizeColourComponent(value - 255);
+                if (value > 255)
+                {
+                    value %= 510;
+                    value = value - 255;
+                    continue;
+                }
+                return value;
             }
-            return value;
         }
 
         public static Color ColorFromHSV(double hue, double saturation, double value)
         {
-            int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
-            double f = hue / 60 - Math.Floor(hue / 60);
+            var hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
+            var f = hue / 60 - Math.Floor(hue / 60);
 
             value = value * 255;
-            int v = Convert.ToInt32(value).NormalizeColourComponent();
-            int p = Convert.ToInt32(value * (1 - saturation)).NormalizeColourComponent();
-            int q = Convert.ToInt32(value * (1 - f * saturation)).NormalizeColourComponent();
-            int t = Convert.ToInt32(value * (1 - (1 - f) * saturation)).NormalizeColourComponent();
+            var v = Convert.ToInt32(value).NormColourComp();
+            var p = Convert.ToInt32(value * (1 - saturation)).NormColourComp();
+            var q = Convert.ToInt32(value * (1 - f * saturation)).NormColourComp();
+            var t = Convert.ToInt32(value * (1 - (1 - f) * saturation)).NormColourComp();
 
-            if (hi == 0)
-                return Color.FromArgb(255, v, t, p);
-            else if (hi == 1)
-                return Color.FromArgb(255, q, v, p);
-            else if (hi == 2)
-                return Color.FromArgb(255, p, v, t);
-            else if (hi == 3)
-                return Color.FromArgb(255, p, q, v);
-            else if (hi == 4)
-                return Color.FromArgb(255, t, p, v);
-            else
-                return Color.FromArgb(255, v, p, q);
+            switch (hi)
+            {
+                case 0:
+                    return Color.FromArgb(255, v, t, p);
+                case 1:
+                    return Color.FromArgb(255, q, v, p);
+                case 2:
+                    return Color.FromArgb(255, p, v, t);
+                case 3:
+                    return Color.FromArgb(255, p, q, v);
+                case 4:
+                    return Color.FromArgb(255, t, p, v);
+                default:
+                    return Color.FromArgb(255, v, p, q);
+            }
+        }
+    }
+
+    public static class LanguageExtensions
+    {
+        public static bool Run<TResult>(this TResult value, Action<TResult> runAction)
+                where TResult : class
+        {
+            if (value != null)
+            {
+                runAction(value);
+                return true;
+            }
+            return false;
+        }
+
+        public static TOut Run<TIn, TOut>(this TIn value, Func<TIn, TOut> runAction)
+                where TIn : class
+        {
+            return value != null
+                           ? runAction(value)
+                           : default(TOut);
         }
     }
 }
